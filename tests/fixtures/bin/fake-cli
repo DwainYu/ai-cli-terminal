@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Stand-in for a real AI CLI. Integration tests point ACT_REAL_<CLI> at this
+# file so the full wrapper runs (title → child → restore) without ever
+# starting a TUI.
+#
+# Environment it understands:
+#   FAKE_ARGS_OUT   file to write the received arguments to (one per line)
+#   FAKE_SINK_SNAP  file to copy $ACT_TITLE_SINK to *at child start*
+#                   (proves the title was emitted before the CLI ran)
+#   FAKE_EXIT       exit status to return (default 0)
+#   FAKE_STDOUT     if set, print a marker line on stdout
+set -u
+
+if [ -n "${FAKE_ARGS_OUT-}" ]; then
+    if [ $# -gt 0 ]; then
+        printf '%s\n' "$@" >"$FAKE_ARGS_OUT"
+    else
+        : >"$FAKE_ARGS_OUT"
+    fi
+fi
+
+if [ -n "${FAKE_SINK_SNAP-}" ]; then
+    if [ -n "${ACT_TITLE_SINK-}" ] && [ -f "$ACT_TITLE_SINK" ]; then
+        cp -- "$ACT_TITLE_SINK" "$FAKE_SINK_SNAP"
+    else
+        : >"$FAKE_SINK_SNAP"
+    fi
+fi
+
+if [ -n "${FAKE_STDOUT-}" ]; then
+    printf 'fake-cli: stdout marker\n'
+fi
+
+exit "${FAKE_EXIT:-0}"
