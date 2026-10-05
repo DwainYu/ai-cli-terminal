@@ -23,6 +23,43 @@ t::eq 'extension-title' "$ACT_ADAPTER_STRATEGY" "pi strategy recorded"
 
 act::adapter::load opencode
 t::eq 'OPENCODE' "$ACT_ADAPTER_DISPLAY" "opencode display name is OPENCODE"
+t::eq 'env-suppress' "$ACT_ADAPTER_STRATEGY" "opencode strategy recorded"
+
+# --- OpenCode: official per-process suppression (D9/D10) --------------------
+out=$(
+    act::adapter::load opencode
+    act::adapter::prepare
+    printf '%s|%s' "${OPENCODE_DISABLE_TERMINAL_TITLE-unset}" \
+        "${OPENCODE_CLI_CONFIG_CONTENT-unset}"
+)
+t::eq 'true|{"terminal":{"title":false}}' "$out" \
+    "opencode: both official suppression vars exported"
+
+out=$(
+    export OPENCODE_CLI_CONFIG_CONTENT='{"tabs":{"mode":"off"}}'
+    act::adapter::load opencode
+    act::adapter::prepare
+    printf '%s' "$OPENCODE_CLI_CONFIG_CONTENT"
+)
+t::eq '{"tabs":{"mode":"off"}}' "$out" \
+    "opencode: a user-set inline config keeps authority"
+
+out=$(
+    export OPENCODE_DISABLE_TERMINAL_TITLE=false
+    act::adapter::load opencode
+    act::adapter::prepare
+    printf '%s' "$OPENCODE_DISABLE_TERMINAL_TITLE"
+)
+t::eq 'false' "$out" "opencode: an explicit user value for the flag is respected"
+
+out=$(
+    export ACT_KEEP_CLI_TITLE=1
+    act::adapter::load opencode
+    act::adapter::prepare
+    printf '%s|%s' "${OPENCODE_DISABLE_TERMINAL_TITLE-unset}" \
+        "${OPENCODE_CLI_CONFIG_CONTENT-unset}"
+)
+t::eq 'unset|unset' "$out" "opencode: ACT_KEEP_CLI_TITLE=1 opts out"
 
 act::adapter::load codebuddy
 t::eq 'CODEBUDDY' "$ACT_ADAPTER_DISPLAY" "codebuddy display name is CODEBUDDY"
