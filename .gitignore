@@ -1,0 +1,18 @@
+# Local / generated
+*.bak-*
+*.log
+*.tmp
+/tmp/
+/tests/.tmp/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (only if a tool ever adds it here; this project ships no runtime deps)
+node_modules/
