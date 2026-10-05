@@ -60,10 +60,12 @@ Not a replacement for Windows Terminal
 | Project name resolver (WSL + Windows paths) | implemented, unit tested |
 | CLI adapter interface + 4 adapters | implemented, unit tested |
 | Wrapper runtime (`title → real CLI → restore`) | implemented, integration tested with fake CLIs |
-| `install --dry-run / --apply`, `uninstall`, `status` | implemented, integration tested against a temp `HOME` |
-| PowerShell side | skeleton only (no `pwsh` on this machine, so untested) |
+| OpenCode title suppression (official per-process env) | implemented, probe-verified (D9) |
+| `install --dry-run / --apply`, `uninstall`, `status` | implemented, integration tested against a temp `HOME` (+ V0 migration coverage) |
+| PowerShell side | harness `scripts/test-windows.ps1` **PASS 7/7** on Windows PowerShell 5.1; `Invoke-ActCli` untested (no AI CLI on Windows) |
+| Real-environment WSL validation (4 real projects × 4 real CLIs) | **PASS 4/4** — manual layer, `tests/manual/wsl/` |
 | Real `~/.bashrc` / `~/.profile` / `settings.json` apply | **not done, never run here** |
-| Real Windows Terminal verification | **not done** |
+| Real Windows Terminal verification | **not done** (procedure in `tests/manual/windows/`) |
 
 See [`docs/v1-scope.md`](docs/v1-scope.md) for the acceptance criteria and what
 is deliberately left out.
@@ -94,8 +96,9 @@ src/
 └── shell/
     ├── bash/       the marker block that install.sh writes into ~/.bashrc
     └── powershell/ Windows-side resolver, title writer, wrapper functions
-scripts/            install.sh, uninstall.sh, status.sh, test.sh
+scripts/            install.sh, uninstall.sh, status.sh, test.sh, test-windows.ps1
 tests/              harness, unit, integration, fixtures (temp HOME only)
+                    + manual layers: tests/manual/wsl, tests/manual/windows
 docs/               architecture, design decisions, references, scope, compatibility
 ```
 
@@ -111,6 +114,17 @@ docs/               architecture, design decisions, references, scope, compatibi
 
 Until `--apply` is run explicitly, this project changes **nothing** outside its
 own repository directory.
+
+Manual validation layers (never part of `./scripts/test.sh` — they start real
+TUIs or target a real Windows machine):
+
+```bash
+./tests/manual/wsl/validate.sh             # WSL: real CLIs in real projects
+```
+
+```powershell
+.\scripts\test-windows.ps1                 # Windows: harness + fixture check
+```
 
 ## Documentation
 

@@ -93,3 +93,18 @@ Later / never?
 - Every strategy claim in `docs/compatibility.md` is either probe-verified or
   explicitly marked *pending verification*.
 - No `--apply` has been run on any machine.
+
+## Phase 2 acceptance criteria (status 2026-10-05)
+
+| AC | Claim | Status |
+| --- | --- | --- |
+| AC-P2-01 | OpenCode official title suppression investigated | **DONE** — docs (`cli.mdx`, `cli/config`), upstream source (`flag.ts`, `app.tsx`), local binary (`strings`); see D9 |
+| AC-P2-02 | OpenCode per-process suppression tested | **PASS** — PTY matrix: flag `1`/`true` FAIL on v2.0.23, `OPENCODE_CLI_CONFIG_CONTENT` **zero writes**; wrapper end-to-end PASS |
+| AC-P2-03 | No custom plugin required if official mechanism works | **DONE** — no plugin in V1; V0 plugin marked obsolete (migration = report only) |
+| AC-P2-04 | PI / Qoder / CodeBuddy strategy documented individually | **DONE** — `docs/compatibility.md` table + D8 rows, each with probe evidence |
+| AC-P2-05 | PowerShell manual test harness exists | **PASS** — `scripts/test-windows.ps1` executed on real Windows PowerShell 5.1: 7/7 |
+| AC-P2-06 | WSL real-machine verification documented | **PASS** — `tests/manual/wsl/validate.sh` 4/4 + results in `docs/compatibility.md` |
+| AC-P2-07 | Windows real-machine verification procedure documented | **DONE** — `tests/manual/windows/README.md` (4-tab procedure; real run NOT VERIFIED) |
+| AC-P2-08 | No broad process killing in tests | **ENFORCED** — `tests/unit/test_hard_limits.sh`; harnesses kill only their own process group / exact pids |
+| AC-P2-09 | All automated tests remain green | **PASS** — 8 test files, 0 failures (manual layers excluded by design) |
+| AC-P2-10 | No real user environment modified | **NO** — no real `--apply`, temp `HOME` everywhere, probe results recorded |

@@ -1,6 +1,7 @@
 # References
 
-Three projects were studied before any code was written. Nothing is copied as
+Three projects were studied before any code was written, and the official
+OpenCode documentation/source was added in Phase 2. Nothing is copied as
 a whole, none of them is a runtime dependency, and none of them is vendored.
 
 ---
@@ -101,10 +102,38 @@ grown the wrong thing.
 
 ---
 
+---
+
+## 4. Official OpenCode documentation and source (Phase 2)
+
+Studied for: how the terminal title is officially controlled, before any
+strategy was written (D9).
+
+### Facts used (with sources)
+
+| Fact | Source |
+| --- | --- |
+| CLI settings live in `~/.config/opencode/cli.json`; `terminal.title` (boolean) "Updates the terminal window title" | `opencode.ai/v2/docs/cli/config` § Terminal |
+| `OPENCODE_CLI_CONFIG_CONTENT='{"…": …}' opencode` applies CLI settings **inline for that process**, merged over the global file (nested objects merge; the file is never written) | `opencode.ai/v2/docs/cli/config` § Inline config |
+| `OPENCODE_DISABLE_TERMINAL_TITLE` (boolean) "Disable automatic terminal title updates" | upstream `cli.mdx` (flag defined in `packages/core/src/flag/flag.ts`) |
+| The upstream repository is `anomalyco/opencode` (the old `sst/opencode` URL redirects there); the installed v2.0.23 binary does **not** contain the flag | GitHub redirect + `strings` on the local binary + live probe |
+
+### Consequences for this project
+
+1. OpenCode suppression is **per-process env only** — no global `cli.json`
+   write, no plugin (D9, D10).
+2. The verified mechanism (`OPENCODE_CLI_CONFIG_CONTENT`) and the
+   forward-compatible flag are both exported by `src/cli/opencode.adapter`.
+3. Upstream claims are re-probed locally before being believed: the flag is
+   official yet **ineffective on v2.0.23**, and the docs say so honestly.
+
+---
+
 ## Summary
 
 ```text
 windows-terminal-tweaks  →  shell-side OSC 0, markers, backup, idempotent install/uninstall
 MicrosoftDocs/terminal   →  which setting decides what, and where dynamic titles are allowed
 pebrel                   →  what to refuse to become
+OpenCode docs + source   →  the official per-process title switches (D9), nothing reinvented
 ```

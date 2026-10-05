@@ -112,10 +112,10 @@ Priority order (fixed by the project brief): **A** native name/title flag →
 
 | CLI | Strategy | Evidence (this machine, 2026-10-05) | Status |
 | --- | --- | --- | --- |
-| **CodeBuddy** | A/B hybrid: suppress its own title with `CODEBUDDY_CODE_DISABLE_TERMINAL_TITLE=1`, then emit ours before start | probe: plain run emits `OSC 0`; with the variable set, **zero** `OSC 0` writes | verified by probe |
-| **Qoder** | A: inject `-n "<project> · QODER"` when the user did not pass `-n`/`--name`; exact tab label additionally needs `ui.hideWindowTitle` | probe: with `--name "probe-project · QODER"` it writes `◇ probe-project · QODER \| Ready` (status icon + padding, refreshed every 1 s while streaming) and an empty title on exit; `ui.dynamicWindowTitle` defaults to `true`, `ui.hideWindowTitle` disables writes | partially verified; config step not implemented yet |
-| **OpenCode** | A: TUI config `terminal.title: false`, then our title survives | binary: `setTerminalTitle("OpenCode")` / `OC \| <title>` gated by `l.data.terminal?.title ?? true`; command palette entry `terminal.title.toggle`; no plugin hook for titles | verified in binary, config path not yet applied |
-| **PI** | C: project-owned extension loaded with `-e` that writes the title itself; one deferred re-emit is required because PI writes its own title *after* `session_start` | probe sequence: `EXT::session_start` → `π - <cwd>` → `EXT::before_agent_start` → …; `ctx.ui.setTitle()` works from a command handler but not from event contexts; PI never re-emitted during a full turn | verified by probe; timing to be finalized |
+| **CodeBuddy** | A/B hybrid: suppress its own title with `CODEBUDDY_CODE_DISABLE_TERMINAL_TITLE=1`, then emit ours before start | probe (re-verified): plain run writes exactly one `OSC 0` with an **empty payload**; with the variable set, **zero** `OSC 0` writes | verified by probe |
+| **Qoder** | A: inject `-n "<project> · QODER"` when the user did not pass `-n`/`--name`; exact tab label additionally needs `ui.hideWindowTitle` | probe (re-verified): **both** `-n` and `--name` accepted → `◇ probe · QODER \| Ready` (icon + padding); control run writes `◇ Qoder CLI CN \| Ready`; empty title on exit; `ui.dynamicWindowTitle` defaults to `true` | injection verified; config step not implemented yet |
+| **OpenCode** | A: per-process env — `OPENCODE_CLI_CONFIG_CONTENT='{"terminal":{"title":false}}'` (verified) + `OPENCODE_DISABLE_TERMINAL_TITLE=true` (forward compat) | probe: control writes `OpenCode`; flag `=1` and `=true` still write on v2.0.23 (flag absent from this build; official upstream `packages/core/src/flag/flag.ts`); inline config → **zero writes**; wrapper end-to-end → only `<project> · OPENCODE` | verified by probe; see D9 |
+| **PI** | C: project-owned extension loaded with `-e` that writes the title itself; one deferred re-emit is required because PI writes its own title *after* `session_start` | probe (real project, Phase 2): wrapper title → extension `session_start` emit → `π - agent-toolbox` → deferred re-emit **wins**; full `pi --help` contains no title-disable flag | verified end to end |
 
 **Respecting user arguments (AC7):** if the user already passed `-n` or
 `--name` (Qoder) the wrapper injects nothing. A second `--name` would break
@@ -128,13 +128,80 @@ extension exists at all.
 
 **OpenCode has no stable official plugin hook for the terminal title.** The
 documented plugin event list (`message.*`, `session.*`, `tool.*`, `tui.*`, …)
-contains no title event; the title is set by the TUI from configuration. The
-V0 file `~/.config/opencode/plugins/marvis-tab-title.ts` is therefore *not*
-carried into V1: a plugin that fights the TUI on every render is exactly the
-kind of fragile coupling this project is trying to avoid. If a stable title
-hook ever appears, it becomes a normal adapter file in this repository.
+contains no title event; the title is set by the TUI from configuration — and
+D9 shows that configuration can be overridden **per process**. The V0 file
+`~/.config/opencode/plugins/marvis-tab-title.ts` is therefore *not* carried
+into V1: a plugin that fights the TUI on every render is exactly the kind of
+fragile coupling this project is trying to avoid. If a stable title hook ever
+appears, it becomes a normal adapter file in this repository.
 
-## D9. Environment boundary: Windows vs WSL
+## D9. OpenCode title suppression: official mechanisms only
+
+**Decision (probed 2026-10-05, local opencode v2.0.23):**
+
+1. **Primary, verified:** the official per-process inline config —
+   `OPENCODE_CLI_CONFIG_CONTENT='{"terminal":{"title":false}}'`
+   (docs: `opencode.ai/v2/docs/cli/config`, § *Inline config*; merges over
+   `~/.config/opencode/cli.json`, the file itself is never written).
+   Probe result: **zero `OSC 0` writes**; wrapper end-to-end shows only
+   `<project> · OPENCODE`.
+2. **Also exported, forward-compatible:** `OPENCODE_DISABLE_TERMINAL_TITLE=true`
+   (official upstream flag: `anomalyco/opencode` `packages/core/src/flag/flag.ts`,
+   documented in `cli.mdx` as "Disable automatic terminal title updates").
+   Probe on v2.0.23: **ineffective** — `=1` and `=true` both still write
+   `OpenCode`, and the flag string is absent from this build. Harmless where
+   unsupported; takes effect on builds that carry the flag. Boolean string
+   form `true` used, per upstream `truthy()` convention.
+3. **No plugin.** The V0 `~/.config/opencode/plugins/marvis-tab-title.ts` is
+   obsolete for V1: never loaded, never rewritten by this project; `status.sh`
+   reports it (and the V0 rc markers) as *manual migration required*. Migration
+   is a report, not an automatic rewrite — V0 files stay the user's to remove.
+
+Phase-1 failed attempts are recorded in the adapter header so they are not
+retried: the variable was `OPENCODE_CONFIG_CONTENT` (wrong name) and the file
+was `tui.json` (since migrated to `cli.json` by OpenCode itself).
+
+**Reason:** the brief's priority order — official mechanism first; a plugin
+that fights the TUI on every render is exactly the fragile coupling V0 had.
+
+## D10. Per-process configuration beats global user configuration
+
+**Decision:** every behavior switch this project needs is set **per process**
+(env var or argument exported by the wrapper for its child only):
+`OPENCODE_CLI_CONFIG_CONTENT`, `OPENCODE_DISABLE_TERMINAL_TITLE`,
+`CODEBUDDY_CODE_DISABLE_TERMINAL_TITLE`, Qoder's `-n`. Nothing is written to
+`~/.config/opencode/cli.json`, `~/.qoder-cn/settings.json`, `~/.bashrc` (beyond
+the marker block) or Windows Terminal `settings.json` during Phase 2 — those
+remain `--apply`-gated at most, and Phase 2 never runs `--apply` on the real
+machine (AC-P2-10).
+
+A user-supplied value keeps authority: an existing `OPENCODE_CLI_CONFIG_CONTENT`
+or `OPENCODE_DISABLE_TERMINAL_TITLE` is respected, and `ACT_KEEP_CLI_TITLE=1`
+opts a CLI out entirely.
+
+**Reason:** it preserves the behavior boundary the brief demands — plain
+`opencode` → native OpenCode; wrapper-launched → `<project> · OPENCODE` —
+and keeps the test suite runnable against a temp `HOME` without global state.
+
+## D11. No background process wrappers for TUIs
+
+**Decision:** every adapter runs its real CLI as a **foreground child** of the
+wrapper (never background + `sleep` + `wait`, never a title daemon, never a
+polling loop). This is enforced mechanically: `tests/unit/test_hard_limits.sh`
+fails if `src/run/act-wrap.sh` or any adapter contains `&`, `sleep`, `wait`,
+or if any code file contains a broad kill invocation (`pkill`/`killall`/
+`Stop-Process -Name`/`taskkill`) — AC-P2-08.
+
+The only timer in the project is PI's extension-side single deferred re-emit
+(the D6 exception): in-process, one-shot, `unref`'d, owning no second process
+and no terminal.
+
+**Reason (V0 lesson):** `background + sleep + wait` produced sparse TUI output
+and ambiguous `wait` semantics on this machine (D5). Note that `exec` is *not*
+a free upgrade either: several CLIs clear or overwrite the title on exit, so
+the wrapper deliberately outlives its child to restore the project title (AC8).
+
+## D12. Environment boundary: Windows vs WSL
 
 **Decision:** the Windows-native project (`D:\ghq\github.com\DwainYu\TFTAutoRecorder`) stays Windows-native. WSL projects stay in WSL. Nothing in this
 project routes one into the other, and no fake wrapper is created for a CLI
@@ -144,7 +211,7 @@ that does not exist on a given side.
 worked from one direction. Windows support here means "the PowerShell adapter
 infrastructure exists and activates when `Get-Command` finds the CLI".
 
-## D10. Test layers, and what may run where
+## D13. Test layers, and what may run where
 
 **Decision:** unit → integration (fake CLIs, temp `HOME`) → terminal/manual
 (real CLIs, real Windows Terminal). CI never launches a real TUI.
@@ -155,7 +222,7 @@ actually running. Rule for this repository: *a test may only kill pids it
 started itself*, and every spawned pid is recorded (parent/child/process
 group) by the harness.
 
-## D11. Documentation must separate observation from fact
+## D14. Documentation must separate observation from fact
 
 **Decision:** V0 findings and probe results are written as "observed on this
 machine at this version", never as universal statements about a CLI.
