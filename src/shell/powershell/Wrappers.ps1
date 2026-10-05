@@ -1,4 +1,4 @@
-# Wrapper runtime — Windows-native counterpart of src/run/act-wrap.sh.
+﻿# Wrapper runtime — Windows-native counterpart of src/run/act-wrap.sh.
 # Strategy B on Windows: set the tab title, run the CLI in the FOREGROUND,
 # restore the project-only title afterwards. No background jobs, no polling.
 # UNTESTED on this machine (no pwsh available in the dev environment).

@@ -1,4 +1,4 @@
-# Project name resolution — Windows-native counterpart of src/lib/project.sh.
+﻿# Project name resolution — Windows-native counterpart of src/lib/project.sh.
 # Rule (identical to WSL): project name = basename of the current directory.
 # UNTESTED on this machine (no pwsh available in the dev environment).
 

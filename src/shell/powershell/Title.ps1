@@ -1,4 +1,4 @@
-# Title emission — Windows-native counterpart of src/lib/title.sh.
+﻿# Title emission — Windows-native counterpart of src/lib/title.sh.
 # Emits OSC 0 (escape + BEL) with the same sanitization rules:
 # strip ESC/BEL/CR/LF/TAB/VT/FF, keep UTF-8 text. The separator is
 # "<space>·<space>" (U+00B7 MIDDLE DOT) — same constant in both shells.
@@ -19,8 +19,10 @@ function ConvertTo-ActTitleText {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Text)
 
-    # Same control-character set as bash: ESC BEL CR LF TAB VT FF.
-    return ($Text -replace "[`u{0000}`u{0007}`u{0009}`u{000A}`u{000B}`u{000C}`u{000D}`u{001B}]", '')
+    # Same control-character set as bash: NUL ESC BEL TAB LF VT FF CR.
+    # .NET regex \x escapes — works on Windows PowerShell 5.1 and PowerShell 7
+    # (the `u{...}` syntax would silently not match on 5.1).
+    return ($Text -replace '[\x00\x07\x09\x0A\x0B\x0C\x0D\x1B]', '')
 }
 
 function Set-ActTabTitle {
@@ -31,8 +33,10 @@ function Set-ActTabTitle {
     if ([string]::IsNullOrEmpty($clean)) { return }
 
     if ($env:ACT_TITLE_SINK) {
-        # Test/diagnostic hook: bytes only, never touching the console.
-        [Console]::Out.Write([char]0x1B + ']0;' + $clean + [char]0x07)
+        # Test hook (same semantics as the bash side): append raw bytes to
+        # the file, never touching the console.
+        $seq = [char]0x1B + ']0;' + $clean + [char]0x07
+        [IO.File]::AppendAllText($env:ACT_TITLE_SINK, $seq)
         return
     }
     try {
