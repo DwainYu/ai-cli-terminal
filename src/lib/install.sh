@@ -22,6 +22,29 @@ ACT_INSTALL_MARKER_END='# <<< ai-cli-terminal <<<'
 
 act::install::timestamp() { date +%Y%m%d%H%M%S; }
 
+# --- V0 (marvis) detection ---------------------------------------------------
+# Coexistence rule: V0 blocks are READ ONLY. This project never removes or
+# rewrites them — automatic migration cannot be done safely, so the honest
+# outcome is a report (D-candidates in docs/compatibility.md).
+# Prints one line when V0 markers are found; returns 0 if found, 1 otherwise.
+act::install::v0_report() {
+    local rc=$1 home=${2:-${HOME:-}} found=0
+    if [ -f "$rc" ] && grep -qs -e 'marvis-ai-cli-tab-title' -e 'MARVIS-AI-CLI-WRAPPER' -- "$rc"; then
+        printf 'v0 leftovers: detected in %s — manual migration required (see docs/compatibility.md)\n' "$rc"
+        found=1
+    fi
+    local v0
+    for v0 in "$home/.local/bin/pi" "$home/.local/bin/opencode" \
+        "$home/.local/bin/codebuddy" "$home/.local/bin/qoder" \
+        "$home/.local/bin/qoder-cn"; do
+        if [ -f "$v0" ] && grep -qs 'marvis' -- "$v0"; then
+            printf 'v0 leftovers: %s (unmanaged; never modified by this project)\n' "$v0"
+            found=1
+        fi
+    done
+    [ "$found" -eq 1 ]
+}
+
 # --- rc helpers -------------------------------------------------------------
 
 # Print only our marker block currently present in $1 (all occurrences).

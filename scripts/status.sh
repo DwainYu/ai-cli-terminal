@@ -54,10 +54,6 @@ case ":$PATH:" in
 esac
 
 # Informational only — V0 artifacts are never read, written or removed here.
-for v0 in "$home/.local/bin/pi" "$home/.local/bin/opencode"; do
-    if [ -f "$v0" ] && grep -qs 'marvis' "$v0"; then
-        printf 'v0 leftover:   %s (unmanaged; run the V0 cleanup yourself)\n' "$v0"
-    fi
-done
+act::install::v0_report "$rc" "$home" || true
 
 exit 0

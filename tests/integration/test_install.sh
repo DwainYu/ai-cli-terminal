@@ -93,14 +93,16 @@ t::eq "no" "$([ -d "$share" ] && echo yes || echo no)" "install dir removed"
 t::eq "yes" "$(ls "$rc".bak-* >/dev/null 2>&1 && echo yes || echo no)" "backup kept after uninstall"
 t::eq "$v0_before" "$(cat "$v0")" "V0 wrapper file untouched by install+uninstall"
 
-# install dry run must never target the V0 wrapper either
+# install dry run must never *act* on the V0 wrapper either (reporting is fine)
 out=$(install)
-t::not_contains "$out" "$v0" "install dry run never mentions the V0 wrapper"
+action_lines=$(printf '%s\n' "$out" | grep -E '^(would modify|would create):' || true)
+t::not_contains "$action_lines" "$v0" "install dry run never targets the V0 wrapper"
+t::contains "$out" "v0 leftovers: $v0" "install reports the V0 wrapper as leftover"
 t::eq "$v0_before" "$(cat "$v0")" "V0 wrapper still untouched after a dry run"
 
 # --- V0 leftovers are informational only ------------------------------------
 out=$(status)
-t::contains "$out" "v0 leftover:" "status flags the V0 wrapper as unmanaged"
+t::contains "$out" "v0 leftovers:" "status flags the V0 wrapper as unmanaged"
 t::eq "$v0_before" "$(cat "$v0")" "status is read-only for V0 files"
 
 t::summary

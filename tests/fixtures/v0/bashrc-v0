@@ -1,0 +1,12 @@
+# user bashrc
+export FOO=1
+
+# >>> marvis-ai-cli-tab-title >>>
+[ -f "$HOME/.local/share/marvis-ai-cli-tab-title-bashrc.sh" ] && . "$HOME/.local/share/marvis-ai-cli-tab-title-bashrc.sh"
+# <<< marvis-ai-cli-tab-title <<<
+
+# MARVIS-AI-CLI-WRAPPER: 确保 AI CLI wrapper 优先于 qoder dispatcher / hermes
+export PATH="$HOME/.local/bin:$PATH"
+
+# MARVIS-AI-CLI-WRAPPER: alias 覆盖 qoder-cn（绕过 dispatcher 的 entry 前置）
+alias qoder-cn="$HOME/.local/bin/qoder-cn"

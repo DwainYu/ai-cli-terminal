@@ -81,6 +81,9 @@ if [ ! -f "$manifest" ]; then
     fi
 fi
 
+# 4. V0 leftovers: report only — never modified by this project ---------------
+act::install::v0_report "$rc" "$home" || true
+
 if [ "$mode" = dry ]; then
     printf 'dry run complete: 0 files written.\n'
 else
