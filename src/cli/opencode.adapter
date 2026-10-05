@@ -1,0 +1,38 @@
+# ai-cli-terminal adapter: OpenCode
+#
+# Evidence (probe on this machine, 2026-10-05, opencode v2.0.23):
+#   * the TUI writes OSC 0 once at startup with the literal `OpenCode`
+#     (or `OC | <session title>` later), via its native `setTerminalTitle`;
+#   * the write is gated by the TUI config key `terminal.title`, default true,
+#     and can be toggled at runtime with the `terminal.title.toggle` palette
+#     entry / keybind;
+#   * there is no plugin hook for the terminal title in the documented plugin
+#     event list, so a plugin is not used;
+#   * `OPENCODE_CONFIG_CONTENT='{"tui":{...}}'` did NOT disable it, and
+#     `~/.config/opencode/tui.json` with `{"terminal":{"title":false}}` did NOT
+#     disable it either — v2.0.23 migrates TUI settings to another location.
+#   * `--standalone` avoids the background service (used by tests).
+#
+# Strategy: A (native config switch) — pending: identify the exact config
+# location in v2.0.23 and wire it through install.sh.
+# See docs/compatibility.md, status: PENDING VERIFICATION.
+
+ACT_ADAPTER_ID=opencode
+ACT_ADAPTER_ALIASES=()
+ACT_ADAPTER_DISPLAY=OPENCODE
+ACT_ADAPTER_BINS=(opencode)
+ACT_ADAPTER_REAL_ENV=ACT_REAL_OPENCODE
+ACT_ADAPTER_STRATEGY=config-suppress
+ACT_ADAPTER_NOTES='TUI key terminal.title must be false; config location in v2.0.23 pending verification'
+
+act::adapter::prepare() {
+    # Opt-in only: pointing OpenCode at a replacement TUI config would also
+    # replace the user's other TUI settings, so it must never be silent.
+    if [ -n "${ACT_OPENCODE_TUI_CONFIG-}" ]; then
+        export OPENCODE_TUI_CONFIG=$ACT_OPENCODE_TUI_CONFIG
+    fi
+    # Documented fallback used by some builds: title switch via env content.
+    if [ -n "${ACT_OPENCODE_TITLE_OFF-}" ]; then
+        export OPENCODE_CONFIG_CONTENT=${ACT_OPENCODE_CONFIG_CONTENT:-'{"tui":{"terminal":{"title":false}}}'}
+    fi
+}

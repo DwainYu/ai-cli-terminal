@@ -1,0 +1,30 @@
+# ai-cli-terminal adapter: PI
+#
+# Evidence (probe on this machine, 2026-10-05, pi 1.0.3):
+#   * PI writes OSC 0 itself: `π - <basename(cwd)>`, or
+#     `π - <session name> - <basename(cwd)>` when `--name` is used.
+#   * The write happens *after* the extension `session_start` event and is not
+#     repeated during a turn (one full prompt turn produced a single write).
+#   * Extensions may call `ctx.ui.setTitle()` from a command handler, but event
+#     contexts do not expose `ctx.ui`; writing the sequence to stdout from an
+#     extension works and wins once emitted after PI's own write.
+#
+# Strategy: C (official extension API) + a single deferred re-emit, because
+# there is no flag or setting that turns PI's own title off.
+# See docs/design-decisions.md (D8) and docs/compatibility.md.
+
+ACT_ADAPTER_ID=pi
+ACT_ADAPTER_ALIASES=()
+ACT_ADAPTER_DISPLAY=PI
+ACT_ADAPTER_BINS=(pi)
+ACT_ADAPTER_REAL_ENV=ACT_REAL_PI
+ACT_ADAPTER_STRATEGY=extension-title
+ACT_ADAPTER_NOTES='extension writes the title; PI itself emits `π - <cwd>` at startup (probe 2026-10-05)'
+
+act::adapter::args() {
+    # Project-owned extension. PI accepts several -e flags; an explicit path
+    # keeps working even when the user passes --no-extensions.
+    if [ -f "$ACT_ROOT/src/cli/pi-title.ts" ]; then
+        ACT_EXTRA_ARGS+=(-e "$ACT_ROOT/src/cli/pi-title.ts")
+    fi
+}

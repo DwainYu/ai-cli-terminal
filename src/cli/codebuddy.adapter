@@ -1,0 +1,26 @@
+# ai-cli-terminal adapter: CodeBuddy
+#
+# Evidence (probe on this machine, 2026-10-05, codebuddy 2.161.3):
+#   * plain run: the CLI writes OSC 0 (an empty payload at startup, later its
+#     own topic-based title);
+#   * run with CODEBUDDY_CODE_DISABLE_TERMINAL_TITLE=1: ZERO OSC 0 writes;
+#   * the switch is read by the CLI's own TerminalTitleUpdater
+#     (`isTruthy(process.env.CODEBUDDY_CODE_DISABLE_TERMINAL_TITLE)`).
+#
+# Strategy: A (official env switch) + B (wrapper emits the title first).
+# Verified by probe: with the variable set, nothing overwrites our title.
+
+ACT_ADAPTER_ID=codebuddy
+ACT_ADAPTER_ALIASES=(cbc)
+ACT_ADAPTER_DISPLAY=CODEBUDDY
+ACT_ADAPTER_BINS=(codebuddy cbc)
+ACT_ADAPTER_REAL_ENV=ACT_REAL_CODEBUDDY
+ACT_ADAPTER_STRATEGY=env-suppress
+ACT_ADAPTER_NOTES='CODEBUDDY_CODE_DISABLE_TERMINAL_TITLE=1 verified by probe (2026-10-05)'
+
+act::adapter::prepare() {
+    # ACT_KEEP_CLI_TITLE=1 lets the CLI keep its own dynamic title (opt-out).
+    if [ "${ACT_KEEP_CLI_TITLE:-0}" != "1" ]; then
+        export CODEBUDDY_CODE_DISABLE_TERMINAL_TITLE=1
+    fi
+}

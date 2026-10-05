@@ -1,0 +1,39 @@
+# ai-cli-terminal adapter: Qoder
+#
+# Evidence (probe on this machine, 2026-10-05, qoderclicn 1.1.65):
+#   * with `--name "probe-project · QODER"` the CLI writes
+#     `◇ probe-project · QODER | Ready` — status icon + padding, refreshed every
+#     second while streaming;
+#   * the title text comes from the session name (`--name`) or the CLI_TITLE
+#     environment variable;
+#   * `ui.dynamicWindowTitle` (default true) controls those writes,
+#     `ui.hideWindowTitle` disables them entirely;
+#   * on exit the CLI writes an empty OSC 0 — the wrapper's restore runs after
+#     the child, so the tab does not stay empty.
+#
+# Strategy: A (official `-n/--name`) + B (wrapper emits the exact title first).
+# The exact `project · QODER` label additionally requires `ui.hideWindowTitle`
+# in $HOME/.qoder-cn/settings.json — an install step, see docs/compatibility.md.
+# A user-supplied -n/--name is never overridden (AC7).
+
+ACT_ADAPTER_ID=qoder
+ACT_ADAPTER_ALIASES=(qoder-cn qodercn)
+ACT_ADAPTER_DISPLAY=QODER
+ACT_ADAPTER_BINS=(qoder qodercn qoder-cn)
+ACT_ADAPTER_REAL_ENV=ACT_REAL_QODER
+ACT_ADAPTER_FALLBACK_PATHS=("$HOME/.qoder-cn/entry/qoder-cn")
+ACT_ADAPTER_STRATEGY=name-arg
+ACT_ADAPTER_NOTES='-n injected when absent; exact label needs ui.hideWindowTitle (config step pending)'
+
+act::adapter::args() {
+    local arg
+    for arg in ${ACT_USER_ARGS[@]+"${ACT_USER_ARGS[@]}"}; do
+        case $arg in
+            -n|--name|-n=*|--name=*|-n?*)
+                # The user already named the session: their choice wins.
+                return 0
+                ;;
+        esac
+    done
+    ACT_EXTRA_ARGS+=(-n "$ACT_TITLE")
+}
