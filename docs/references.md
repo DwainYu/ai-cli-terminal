@@ -24,7 +24,7 @@ idempotency.
 | Uninstall = delete the block, leave everything else alone | `scripts/uninstall.sh` |
 | A shell *function* shadows a program of the same name (function wins over `PATH`), and inside it the program is resolved with `command <name>` to avoid recursion | `src/lib/resolve.sh` applies the same "bypass yourself" rule to the wrapper |
 | An explicit user argument (`--name`, `-n`) is never overridden | `act::adapter::args` for Qoder checks the user's argv first |
-| Warn about `suppressApplicationTitle` profiles instead of silently editing them | `docs/compatibility.md`, `scripts/status.sh` |
+| Never edit `settings.json`; the `suppressApplicationTitle` requirement is documented and checked by hand | `docs/compatibility.md`, `tests/manual/windows/README.md` (V1's `status.sh` is read-only and does not parse `settings.json`) |
 | Edit `settings.json` textually by key, never round-trip through a JSON parser (JSONC comments and formatting would be destroyed) | the rule adopted for any future Windows Terminal / Qoder settings edit |
 
 ### What was not taken
@@ -99,8 +99,6 @@ an agent sidebar, and session restoration. **None of that belongs here.**
 This project is not a terminal, not an orchestrator, not a session manager,
 not a workspace manager, and ships no GUI. If V1 ever grows a sidebar, it has
 grown the wrong thing.
-
----
 
 ---
 

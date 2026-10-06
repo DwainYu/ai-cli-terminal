@@ -39,11 +39,13 @@ Notes:
   adapter checks `ACT_USER_ARGS` first (AC3, integration tested).
 - OpenCode validation runs use `--standalone` so the interactive TUI is never
   conflated with a background service (the wrapper does not wait on either).
-- The exact Qoder label `<project> · QODER` (without `◇ … | Ready` decoration)
-  additionally needs `ui.hideWindowTitle` in `~/.qoder-cn/settings.json` — a
-  global, `--apply`-gated config step that Phase 2 deliberately does not write
-  (D10); until then the wrapper's exact title is what the tab shows *before*
-  Qoder's decorated refresh.
+- Qoder's exact plain label `<project> · QODER` (without `◇ … | Ready`
+  decoration) additionally needs `ui.hideWindowTitle` in
+  `~/.qoder-cn/settings.json`. **Optional polish, not required for V1**: it is
+  a global config file, so it is `--apply`-gated at most and deliberately not
+  written by this project (D10); until then the wrapper's exact title is what
+  the tab shows *before* Qoder's decorated refresh, and the decorated label is
+  accepted as a pass in the Windows procedure.
 
 ## Validation results
 
@@ -102,13 +104,14 @@ effect is a window-title round trip that restores the original title.
 | --- | --- |
 | V0 rc markers (`marvis-ai-cli-tab-title`, `MARVIS-AI-CLI-WRAPPER`) | **detected, never rewritten** — install/status report *manual migration required* |
 | V0 wrappers in `~/.local/bin` | read-only, reported as leftovers; V1's PATH entry is guarded and, on first source, precedes them |
-| V0 `~/.config/opencode/plugins/marvis-tab-title.ts` | **obsolete for V1** — superseded by the official env strategy (D9); deleting it from the real machine is the user's manual step |
+| V0 `~/.config/opencode/plugins/marvis-tab-title.ts` | **obsolete for V1 / legacy only** — not a runtime dependency: superseded by the official per-process env strategy (D9); never loaded by V1, never rewritten by this project; deleting it from the real machine is the user's manual step |
 | Coexistence guarantees | tested in `tests/integration/test_migration.sh`: install ×2 idempotent, V0 block byte-identical, uninstall restores the V0-era file byte-for-byte |
 
 ## Known gaps
 
-1. Qoder `ui.hideWindowTitle` config step not implemented (exact plain label;
-   `--apply`-gated, D10).
+1. Qoder `ui.hideWindowTitle` config step not implemented — **optional
+   polish only** (exact plain label; a global config file, deliberately not
+   written by this project, D10; not a V1 blocker).
 2. Real Windows Terminal verification of AC5/AC6/AC8 not done (manual
    procedure ready).
 3. Windows side has no AI CLIs → `Invoke-ActCli` runs only on WSL for now.

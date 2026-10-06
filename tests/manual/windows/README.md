@@ -1,5 +1,10 @@
 # Windows manual validation
 
+> **This is a HUMAN VERIFICATION, not CI.** Nothing in this directory runs
+> from `./scripts/test.sh` or `tests/run.sh`, nothing here is automated, and
+> no result below is ever simulated. If a check has not been done by a person
+> in a real Windows Terminal window, it stays **NOT VERIFIED**.
+
 Status (2026-10-05):
 
 | Item | Status |
@@ -35,14 +40,22 @@ window-title round trip that restores the original title.
 
 ## Four-tab Windows Terminal procedure (AC-P2-07)
 
-Run this by hand in a real Windows Terminal window. Default profile settings
+Run this **by hand**, in a real Windows Terminal window, watched by a human.
+It is human verification — not a CI job, not a test-suite layer, and it must
+not be automated. Default profile settings
 only — `tabTitle` and `suppressApplicationTitle` must stay unset (see
 `docs/references.md`), otherwise `OSC 0` never reaches the tab label.
 
+Verify exactly five things: **project + CLI title**, **tab isolation**,
+**title persistence**, **title restore**, and a working shell afterwards.
+
 1. Open Windows Terminal with four tabs; in **each** tab enter WSL:
    `wsl` (or set the WSL profile as default).
-2. In each tab, install once for real (the only allowed `--apply`):
-   `./scripts/install.sh --apply`, then open a **new** tab so the block loads.
+2. Install once for the machine — this is the **USER ACTION REQUIRED**
+   `--apply` (see `docs/release-checklist.md`): review
+   `./scripts/install.sh --dry-run`, then run `./scripts/install.sh --apply`
+   once. Opening a **new** tab afterwards loads the block; do not re-run it
+   in every tab (a second run would just report `unchanged`).
 3. Start one pair per tab:
 
    | Tab | command | expected tab title |
@@ -63,8 +76,10 @@ only — `tabTitle` and `suppressApplicationTitle` must stay unset (see
    - CodeBuddy's empty `OSC 0` is fully suppressed (harness: zero writes —
      confirm the tab never blanks),
    - Qoder's decorated `◇ <project> · QODER | Ready` label vs the exact
-     `<project> · QODER` (exact label needs `ui.hideWindowTitle`, see
-     `docs/compatibility.md`).
+     `<project> · QODER` — the decorated label **passes** this procedure; the
+     exact plain label is optional polish only (optional
+     `ui.hideWindowTitle` in `~/.qoder-cn/settings.json`, never written by
+     this project, see `docs/compatibility.md`).
 
 Nothing in this procedure may be automated by the test suite: it starts real
 TUIs and needs a human watching real tabs.

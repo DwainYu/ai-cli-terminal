@@ -73,8 +73,10 @@ Qoder: `OSC 0` with an empty payload on `process.on("exit")`, and OpenCode:
 survives the child can always write the restore title *after* those writes.
 
 Signals: the wrapper and its child share one process group, so `Ctrl+C`
-reaches the child the way it always does; the wrapper's `EXIT`/`INT`/`TERM`
-traps still run and restore the title.
+reaches the child the way it always does. `INT` is deliberately **not**
+trapped or ignored — the real CLI receives it unchanged; when the child dies
+from it, the wrapper continues to its `EXIT` trap and restores the title.
+`TERM`/`HUP` are mapped to `143`/`129` so the same `EXIT` path runs.
 
 ## 3. Components
 
@@ -186,7 +188,7 @@ never "Windows ships with all AI CLIs".
 | Rule | Enforcement |
 | --- | --- |
 | Development and tests never touch the real user environment | tests set `HOME` to a temp dir; `install.sh` defaults to dry run |
-| Only `--apply` writes to `~/.bashrc`, `~/.profile`, `~/.local/bin`, `~/.config/opencode`, `settings.json` | single code path in `scripts/install.sh`, gated by the flag |
+| `--apply` is the only code path that writes user files — and it writes exactly two things: the rc marker block (default `~/.bashrc`) and the runtime tree under `~/.local/share/ai-cli-terminal` | `scripts/install.sh` header + `src/lib/install.sh`; nothing else is ever opened for writing (`~/.local/bin`, `~/.config/opencode`, `~/.qoder-cn`, `settings.json` are **never** written — see D10) |
 | All modifications are `backup + marker + idempotent + minimal diff` | section 3.6, plus timestamped `.bak-` copies created only when content changes |
 | Tests manage only processes they start | no `pkill`, no broad process killing anywhere in this repository |
 
@@ -195,15 +197,19 @@ never "Windows ships with all AI CLIs".
 ```text
 tests/
 ├── run.sh              harness (no external dependencies)
-├── unit/               pure functions: title, project name, adapters, resolver
-├── integration/        wrapper against fake CLIs, install/uninstall against temp HOME
-├── fixtures/bin/       fake CLIs that echo arguments, exit codes, and fake titles
-└── terminal/           PTY helpers for manual/optional real-CLI verification
+├── unit/               pure functions: title, project name, adapters, resolver,
+│                       hard limits (no broad kill, no background runtime)
+├── integration/        wrapper against fake CLIs, install/uninstall against temp HOME,
+│                       V0 migration coexistence
+├── fixtures/           fake CLIs and a V0-era rc fixture
+└── manual/             never run by the suite: wsl/ (real CLIs, real projects)
+                        and windows/ (PowerShell harness + real Terminal procedure)
 ```
 
 - **unit** — fast, deterministic, no processes, no tty.
 - **integration** — spawns only fake CLIs from `fixtures/`; captures emitted
   bytes through `ACT_TITLE_SINK`; uses a temporary `HOME`.
-- **terminal integration / manual** — real `OSC 0` behaviour of Windows
-  Terminal and the four real CLIs. Recorded in
-  `docs/compatibility.md`, never run in CI, never run in the background.
+- **manual** — real `OSC 0` behaviour of Windows Terminal and the four real
+  CLIs. Recorded in `docs/compatibility.md`, never run from `tests/run.sh`,
+  never run in CI, never run in the background. The Windows tab procedure is
+  a **human verification**, not a test (see `tests/manual/windows/README.md`).

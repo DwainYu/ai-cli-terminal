@@ -32,8 +32,11 @@ and configuration drifts.
 
 ## D3. `suppressApplicationTitle` must stay off
 
-**Decision:** this project never sets `suppressApplicationTitle: true` and warns
-when a profile already has it.
+**Decision:** this project never sets `suppressApplicationTitle: true` and
+never edits Windows Terminal `settings.json` at all. V1 does not even read
+the file: the requirement that it stay unset is documented
+(`docs/compatibility.md`) and checked by hand in the Windows Terminal
+procedure (`tests/manual/windows/README.md`), not by a warning in code.
 
 **Reason:** with `suppressApplicationTitle: true`, Windows Terminal ignores
 title-change messages from the application and shows `tabTitle` (or `name`).

@@ -27,7 +27,7 @@ workspace registry, project database
 GUI, dashboard, sidebar, session database, agent monitor
 terminal emulator, tmux, Zellij, Orca, Tabby, WezTerm
 shell theme framework
-Windows Terminal settings.json editing (warn-only in status)
+reading or editing Windows Terminal settings.json (documented, hand-checked)
 background launch + fixed sleep + polling + title daemon
 per-project Windows Terminal profiles
 OSC 9;9 directory restoration, OSC 133 shell integration marks
@@ -77,10 +77,14 @@ Phase 1  (this commit series)
 
 Phase 2  (after V1 passes in isolation, on explicit request)
   ./scripts/install.sh --dry-run   → prints the exact list of files it would touch
-  ./scripts/install.sh --apply     → the only way ~/.bashrc, ~/.local/bin, … change
-  per-CLI suppression config (OpenCode terminal.title, Qoder ui.hideWindowTitle)
+  per-CLI title suppression        → solved per process (env / argument, D10);
+                                     global config writes deliberately NOT done
   real Windows Terminal verification of AC5, AC6, AC8
   finalize PI extension timing with a PTY test
+
+Phase 3  (V1 release candidate — final audit, no new features)
+  audit runtime + adapters + docs, prepare the release checklist,
+  stage the real --apply for the user, tag v1.0.0 after human verification
 
 Later / never?
   PowerShell apply path, if a machine actually needs it
@@ -107,4 +111,19 @@ Later / never?
 | AC-P2-07 | Windows real-machine verification procedure documented | **DONE** — `tests/manual/windows/README.md` (4-tab procedure; real run NOT VERIFIED) |
 | AC-P2-08 | No broad process killing in tests | **ENFORCED** — `tests/unit/test_hard_limits.sh`; harnesses kill only their own process group / exact pids |
 | AC-P2-09 | All automated tests remain green | **PASS** — 8 test files, 0 failures (manual layers excluded by design) |
-| AC-P2-10 | No real user environment modified | **NO** — no real `--apply`, temp `HOME` everywhere, probe results recorded |
+| AC-P2-10 | No real user environment modified | **PASS** — no real `--apply`, temp `HOME` everywhere, probe results recorded |
+| AC-P2-12 | Windows project fixture resolves the right project name | **PASS** — harness: `D:\ghq\github.com\DwainYu\TFTAutoRecorder` → `TFTAutoRecorder` (referenced by `scripts/test-windows.ps1`) |
+
+## Phase 3 — V1 release candidate (status 2026-10-06)
+
+Scope of this phase: audit only — no redesign, no new features.
+
+| Item | Status |
+| --- | --- |
+| Final code audit of `src/`, `bin/`, `scripts/`, `tests/`, `docs/` | **DONE** — foreground child + `EXIT` restore + exit-code propagation intact; no `&`, no `sleep`, no polling, no daemon, no broad kill (`test_hard_limits.sh` green) |
+| Per-CLI strategy audit (PI / OpenCode / CodeBuddy / Qoder) | **DONE** — each strategy kept as probed, with its own rationale (`docs/compatibility.md`, `docs/design-decisions.md` D8–D10) |
+| OpenCode official strategy, no plugin | **DONE** — V0 `~/.config/opencode/plugins/marvis-tab-title.ts` recorded as legacy only; no runtime dependency, never written |
+| Qoder exact plain label | **OPTIONAL POLISH**, explicitly not a V1 blocker |
+| Windows Terminal human verification | **NOT VERIFIED** — human procedure only, never simulated |
+| Real `--apply` | **NOT RUN** — command prepared, awaiting the user (`USER ACTION REQUIRED`) |
+| Release checklist | `docs/release-checklist.md` |
