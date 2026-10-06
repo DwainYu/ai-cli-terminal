@@ -5,14 +5,14 @@
 > no result below is ever simulated. If a check has not been done by a person
 > in a real Windows Terminal window, it stays **NOT VERIFIED**.
 
-Status (2026-10-05):
+Status (2026-10-06):
 
 | Item | Status |
 | --- | --- |
 | PowerShell harness (`scripts/test-windows.ps1`) | **READY — executed, 7/7 PASS** (Windows PowerShell 5.1, run from WSL via `powershell.exe`) |
 | Project fixture `D:\ghq\github.com\DwainYu\TFTAutoRecorder` | **PASS** — `Get-ActProjectName` → `TFTAutoRecorder` |
 | AI CLIs on Windows | **NOT AVAILABLE** for pi/opencode/codebuddy/qoder — not installed, and this harness never installs them |
-| Real Windows Terminal 4-tab check (AC5/AC6/AC8) | **NOT VERIFIED** — procedure below |
+| Real Windows Terminal 4-tab check (AC5/AC6/AC8) | **PASS 7/7 — run by hand 2026-10-06, results below** |
 
 ## Running the harness on a real Windows machine
 
@@ -83,3 +83,51 @@ Verify exactly five things: **project + CLI title**, **tab isolation**,
 
 Nothing in this procedure may be automated by the test suite: it starts real
 TUIs and needs a human watching real tabs.
+
+## Results — human verification, 2026-10-06
+
+Run by hand in a real Windows Terminal window: four tabs, each `wsl` (a login
+shell — confirmed, because `~/.profile`'s `~/bin` entries show up only there).
+Preconditions met before starting: `./scripts/install.sh --apply` (block +
+runtime tree installed), the machine's manual V0 migration done (so a login
+shell resolves the **V1** wrappers), and `settings.json` contains neither
+`tabTitle` nor `suppressApplicationTitle`.
+
+Entry proof, every tab (`command -v <cli>` and `ACT_DEBUG=1 <cli>`):
+
+```text
+/home/user/.local/share/ai-cli-terminal/bin/pi|opencode|codebuddy|qoder
+ai-cli-terminal: adapter=<cli> display=<CLI> strategy=<strategy>
+ai-cli-terminal: project=<project> title=<project> · <CLI>
+ai-cli-terminal: real=/home/user/.hermes/node/bin/{pi,opencode,codebuddy}
+                 real=/home/user/.qoder-cn/entry/qodercn        (qoder)
+ai-cli-terminal: final extra=(-e …/src/cli/pi-title.ts)          (pi only)
+```
+
+| # | Check | Result |
+| --- | --- | --- |
+| 1 | tab label = `<project> · <CLI>` while the TUI runs (AC1–AC4) | **PASS** — A `agent-toolbox · PI`, B `tft-training-log · OPENCODE`, C `hengguang-ai-platform-demo · CODEBUDDY`, D `md-content-publisher · QODER` (Qoder as `◇ … \| Ready`, accepted per step 5) |
+| 2 | switching tabs does not change any other tab's label (AC5, AC6) | **PASS** |
+| 3 | `pwd` inside each tab matches that tab's project | **PASS 4/4** — four distinct paths, one per tab |
+| 4 | after exit: project-only label + working prompt (AC8) | **PASS** |
+| 5 | label stable while typing / streaming | **PASS — stable** |
+| 6 | CodeBuddy's empty `OSC 0` suppressed, tab never blanks | **PASS** |
+| 7 | Qoder decorated label accepted | **PASS** (`◇` prefix noted) |
+
+**Deviation observed and recorded (not hidden):** the *first* Tab A run showed
+PI's own `π - agent-toolbox` at idle instead of `agent-toolbox · PI`. An
+instrumented pty run of the same wrapper (read-only, temp HOME, process-group
+kill) captured the sequence twice:
+
+```text
++0.02s  agent-toolbox · PI       wrapper's first emission
++0.40s  agent-toolbox · PI       extension, session_start
++0.40s  π - agent-toolbox        PI's own write (same read batch)
++0.80s  agent-toolbox · PI       400 ms deferred re-emit  -> LAST, wins
+```
+
+so the mechanism holds when PI writes within +400 ms of `session_start`, and
+loses when PI is slower — an intermittent cold-start race. The repeated Tab A
+run in Windows Terminal showed the standard label, sending a prompt kept it,
+and it did not flip back. Accepted as a documented non-blocker; see
+`docs/release-checklist.md` → *Not blockers for V1*.

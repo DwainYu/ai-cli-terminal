@@ -51,12 +51,15 @@ Not a replacement for Windows Terminal
 
 ## Status
 
-**Phase 3 — V1 Release Candidate.** Automated and recorded manual layers are
-green; **no machine has been modified** (`--apply` has never been run here).
+**Phase 3 — V1 Release Candidate, both human gates complete.** Automated and
+recorded manual layers are green; the real machine was modified exactly once,
+by `./scripts/install.sh --apply` on **2026-10-06** (marker block + runtime
+tree, timestamped backup kept, `uninstall.sh --apply` reverts it).
 
-Version: `0.9.0` — release candidate. `v1.0.0` is tagged only after the two
-human items in [`docs/release-checklist.md`](docs/release-checklist.md)
-(Windows Terminal verification, the first real `--apply`).
+Version: `0.9.0` — release candidate. The two human items in
+[`docs/release-checklist.md`](docs/release-checklist.md) are done (the first
+real `--apply`, the four-tab Windows Terminal verification); `v1.0.0` is
+tagged by hand, only after that checklist is committed with every box ticked.
 
 | Area | State |
 | --- | --- |
@@ -70,8 +73,8 @@ human items in [`docs/release-checklist.md`](docs/release-checklist.md)
 | Automated suite | **PASS — 8 files / 162 assertions, 0 failures** (`./scripts/test.sh`) |
 | PowerShell side | harness `scripts/test-windows.ps1` **PASS 7/7** on Windows PowerShell 5.1; `Invoke-ActCli` untested (no AI CLI on Windows) |
 | Real-environment WSL validation (4 real projects × 4 real CLIs) | **PASS 4/4** — manual layer, `tests/manual/wsl/` |
-| Real `~/.bashrc` / `settings.json` apply | **not done, never run here** — `./scripts/install.sh --apply` awaits the user |
-| Real Windows Terminal verification | **NOT VERIFIED** — human procedure in `tests/manual/windows/` |
+| Real `~/.bashrc` apply (2026-10-06) | **done once** — marker block + 21-file runtime tree, backup `~/.bashrc.bak-20261006171409`, byte-identical outside the markers, second run `unchanged`; `settings.json` still never written |
+| Real Windows Terminal verification | **PASS 7/7** (2026-10-06, by hand, four tabs) — record in `tests/manual/windows/README.md`; one documented PI cold-start title race |
 
 See [`docs/v1-scope.md`](docs/v1-scope.md) for the acceptance criteria and what
 is deliberately left out.
@@ -159,14 +162,17 @@ verification, not CI**):
 ## Limitations (V1)
 
 ```text
-Real Windows Terminal 4-tab check     NOT VERIFIED — human procedure, tests/manual/windows/README.md
-Real --apply                          NEVER RUN — awaiting the user's explicit command
+PI cold-start title race              intermittent: PI's own "π - <project>" can hold the tab at idle
+                                      until the first turn re-emits <project> · PI (non-blocker, documented)
+Long project name                     cut off by the Windows Terminal tab width; hover shows the full label
+Per-CLI colour or icon                out of scope — V1's UI is the tab title text only
 Qoder exact plain label               optional polish only: shows ◇ <project> · QODER | Ready
                                       unless ui.hideWindowTitle is set in ~/.qoder-cn/settings.json
                                       (never written by this project)
 Windows AI CLIs                       pi/opencode/codebuddy/qoder NOT AVAILABLE — never installed here
 PowerShell 7 (pwsh)                   not available in this environment; harness ran on 5.1
-V0 (marvis) leftovers                 detected and reported, manual migration only
+V0 (marvis) leftovers                 retired by hand 2026-10-06 → ~/.local/share/ai-cli-terminal-v0-retired/
+                                      (moved, not deleted; the rc marker block stays, status.sh reports it)
 No background process, no daemon,
 no polling, no sleep, no broad kill   enforced by tests/unit/test_hard_limits.sh
 ```

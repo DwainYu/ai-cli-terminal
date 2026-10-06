@@ -13,7 +13,7 @@ re-probe before trusting it elsewhere (D14, and the V0 failure log in
 | **CodeBuddy** | 2.161.3 | A/B hybrid: `CODEBUDDY_CODE_DISABLE_TERMINAL_TITLE=1` (per process) + wrapper title | control run: exactly one `OSC 0` with an **empty payload**; with the variable: **zero** writes; wrapper run: only `<project> · CODEBUDDY` | probe-verified; real-project run PASS |
 | **Qoder** | qoderclicn 1.1.65 | A: inject `-n "<project> · QODER"` when the user did not pass `-n`/`--name` | **both `-n` and `--name` accepted** → `◇ probe · QODER \| Ready`; control run → `◇ Qoder CLI CN \| Ready`; empty `OSC 0` on exit (wrapper restore runs after) | injection probe-verified; real-project run PASS; exact plain label needs the config step below |
 | **OpenCode** | v2.0.23 | A: per-process env — `OPENCODE_CLI_CONFIG_CONTENT='{"terminal":{"title":false}}'` + `OPENCODE_DISABLE_TERMINAL_TITLE=true` (forward compat) | suppression matrix below; wrapper run: only `<project> · OPENCODE` | **verified** (D9); plugin no longer part of any strategy |
-| **PI** | 1.0.3 | C: project-owned extension (`-e src/cli/pi-title.ts`) + one deferred re-emit | full `pi --help` has **no title-disable flag**; real-project lifecycle: wrapper title → extension `session_start` emit → `π - agent-toolbox` → deferred re-emit **wins** (final title) | verified end to end |
+| **PI** | 1.0.3 | C: project-owned extension (`-e src/cli/pi-title.ts`) + one deferred re-emit | full `pi --help` has **no title-disable flag**; real-project lifecycle: wrapper title → extension `session_start` emit → `π - agent-toolbox` → deferred re-emit **wins** (final title). Instrumented 2026-10-06 (real project, pty, temp HOME): `+0.02s` wrapper → `+0.40/+0.53s` extension emit **and** PI's own write in the same read batch → `+0.80/+0.93s` deferred re-emit, **LAST = `agent-toolbox · PI` (2/2 runs)** | verified end to end; **one** real Windows Terminal run showed PI winning at cold start — intermittent race, documented as a non-blocker (`docs/release-checklist.md`) |
 
 ### OpenCode suppression matrix (local v2.0.23, PTY, temp HOME)
 
@@ -73,7 +73,7 @@ was distinguished by timestamps and temp-`HOME` pid markers).
 | `scripts/test-windows.ps1` harness | **READY — executed on Windows PowerShell 5.1: 7/7 PASS** |
 | `D:\ghq\github.com\DwainYu\TFTAutoRecorder` project name | **PASS** → `TFTAutoRecorder` |
 | `pi` / `opencode` / `codebuddy` / `qoder` on Windows | **NOT AVAILABLE** (not installed; harness never installs) |
-| Real Windows Terminal 4-tab check (AC5/AC6/AC8) | **NOT VERIFIED** — procedure in `tests/manual/windows/README.md` |
+| Real Windows Terminal 4-tab check (AC5/AC6/AC8) | **PASS 7/7 — run by hand 2026-10-06**; record in `tests/manual/windows/README.md` |
 
 The harness is read-only: no install, no `settings.json` edit, the only side
 effect is a window-title round trip that restores the original title.
@@ -93,8 +93,9 @@ effect is a window-title round trip that restores the original title.
 - A profile's `tabTitle` fixes a static label and `suppressApplicationTitle`
   blocks `OSC 0`/`OSC 2` from the shell — our scheme assumes **neither** is set.
 - Per-tab isolation (AC5/AC6) follows from `OSC 0` applying to the focused
-  pane's tab; this is official behaviour but has **not** been re-verified in a
-  real Terminal window yet (procedure: `tests/manual/windows/README.md`).
+  pane's tab; this is official behaviour and was **verified by hand in a real
+  Windows Terminal window on 2026-10-06** (four tabs, procedure
+  `tests/manual/windows/README.md`).
 - OSC 9;9 (working directory) and OSC 133 (prompt marks) are documented but
   deliberately out of scope for V1.
 
@@ -103,7 +104,7 @@ effect is a window-title round trip that restores the original title.
 | Topic | Status |
 | --- | --- |
 | V0 rc markers (`marvis-ai-cli-tab-title`, `MARVIS-AI-CLI-WRAPPER`) | **detected, never rewritten** — install/status report *manual migration required* |
-| V0 wrappers in `~/.local/bin` | read-only, reported as leftovers; V1's PATH entry is guarded and, on first source, precedes them |
+| V0 wrappers in `~/.local/bin` | read-only, reported as leftovers; V1's PATH entry is guarded and, on first source, precedes them — **but in a login shell `~/.profile` prepends `~/.local/bin` again *after* sourcing `~/.bashrc`**, so V0 outranks V1 there (Windows Terminal's `wsl.exe` starts a login shell). Retired by hand 2026-10-06: the five wrappers moved to `~/.local/share/ai-cli-terminal-v0-retired/` and the one `alias qoder-cn` line retargeted; `~/.profile` itself untouched |
 | V0 `~/.config/opencode/plugins/marvis-tab-title.ts` | **obsolete for V1 / legacy only** — not a runtime dependency: superseded by the official per-process env strategy (D9); never loaded by V1, never rewritten by this project; deleting it from the real machine is the user's manual step |
 | Coexistence guarantees | tested in `tests/integration/test_migration.sh`: install ×2 idempotent, V0 block byte-identical, uninstall restores the V0-era file byte-for-byte |
 
@@ -112,8 +113,13 @@ effect is a window-title round trip that restores the original title.
 1. Qoder `ui.hideWindowTitle` config step not implemented — **optional
    polish only** (exact plain label; a global config file, deliberately not
    written by this project, D10; not a V1 blocker).
-2. Real Windows Terminal verification of AC5/AC6/AC8 not done (manual
-   procedure ready).
+2. PI cold-start title race — the single 400 ms re-emit loses when PI writes
+   its own title later than +400 ms (observed once, 2026-10-06); the first
+   turn's events re-emit `<project> · PI` and it then holds. Accepted as a
+   documented non-blocker (`docs/release-checklist.md`). Closing it for good
+   means a second timer, i.e. changing the "exactly one timer in the project"
+   invariant in `docs/design-decisions.md`. (AC5/AC6/AC8 real-Terminal
+   verification: **done 2026-10-06**.)
 3. Windows side has no AI CLIs → `Invoke-ActCli` runs only on WSL for now.
 4. `pwsh` (PowerShell 7) unavailable here — harness validated on 5.1 only.
 5. V0 leftovers on this machine (`~/.local/bin/{pi,opencode,codebuddy,qoder,
